@@ -3,8 +3,8 @@
 #include <iomanip>
 #include <iostream>
 
-Node::Node(int _id, int x, int y)
-    : id(_id), pos(Pos(x, y)), neighbor(std::vector<Node*>(0))
+Node::Node(int _id, int x, int y, int t)
+    : id(_id), pos(Pos(x, y, t)), neighbor(std::vector<Node*>(0))
 {
 }
 

@@ -1,10 +1,15 @@
 #pragma once
 
+#define HORIZONTAL 0
+#define VERTICAL 1
+#define UNDEFINE -1
+
 struct Pos {
   int x;
   int y;
+  int t;
 
-  Pos(int _x, int _y);
+  Pos(int _x, int _y, int _t);
   ~Pos();
 
   void print() const;

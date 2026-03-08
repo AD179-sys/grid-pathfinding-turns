@@ -4,14 +4,15 @@
 #include <iomanip>
 #include <iostream>
 
-Pos::Pos(int _x, int _y) : x(_x), y(_y) {}
+Pos::Pos(int _x, int _y, int _t) : x(_x), y(_y), t(_t) {}
 
 Pos::~Pos() {}
 
 void Pos::print() const
 {
   std::cout << "(" << std::right << std::setw(3) << x << ", " << std::right
-            << std::setw(3) << y << ")";
+            << std::setw(3) << y << ", " << std::right
+            << std::setw(3) << t << ")";
 }
 
 void Pos::println() const
@@ -39,15 +40,15 @@ bool Pos::operator==(const Pos& other) const
 
 Pos Pos::operator+(const Pos& other) const
 {
-  return Pos(x + other.x, y + other.y);
+  return Pos(x + other.x, y + other.y, UNDEFINE);
 }
 
 Pos Pos::operator-(const Pos& other) const
 {
-  return Pos(x - other.x, y - other.y);
+  return Pos(x - other.x, y - other.y, UNDEFINE);
 }
 
-Pos Pos::operator*(const int i) const { return Pos(x * i, y * i); }
+Pos Pos::operator*(const int i) const { return Pos(x * i, y * i, UNDEFINE); }
 
 void Pos::operator+=(const Pos& other)
 {

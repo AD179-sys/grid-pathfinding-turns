@@ -5,6 +5,7 @@
 #include <iostream>
 #include <queue>
 #include <regex>
+#include <cstring>
 using Time = std::chrono::steady_clock;
 
 Graph::Graph() {}
@@ -12,10 +13,6 @@ Graph::Graph() {}
 Graph::~Graph()
 {
   for (auto v : V) delete v;
-  if (!PATH_TABLE.empty()) {
-    for (auto table : PATH_TABLE) delete table;
-  }
-
 }
 
 Path Graph::getPathWithoutCache(Node* s, Node* g, std::mt19937* MT,
@@ -96,19 +93,8 @@ Path Graph::getPathWithoutCache(Node* s, Node* g, std::mt19937* MT,
   return path;
 }
 
-void Graph::initilizePathTable()
-{
-  for (int i = 0; i < (int)V.size(); ++i) {
-    auto table = new std::unordered_map<int, Path>();
-    PATH_TABLE.push_back(table);
-  }
-}
-
 Path Graph::getPathWithCache(Node* const s, Node* const g, std::mt19937* MT)
 {
-  // initialize cache
-  if (PATH_TABLE.empty()) initilizePathTable();
-
   struct AstarNode {
     Node* v;
     int g;
@@ -194,8 +180,8 @@ Path Graph::getPathWithCache(Node* const s, Node* const g, std::mt19937* MT)
     }
 
     // check whether the remained path has already known
-    auto itr = PATH_TABLE[n->v->id]->find(g->id);
-    if (itr != PATH_TABLE[n->v->id]->end()) {
+    auto itr = PATH_TABLE.find(getPathTableKey(n->v, g));
+    if (itr != PATH_TABLE.end()) {
       // if found then complement the rest
       Path path = itr->second;
       for (auto k = path.begin() + 1; k != path.end(); ++k) {
@@ -215,8 +201,8 @@ Path Graph::getPathWithCache(Node* const s, Node* const g, std::mt19937* MT)
       int g_value = n->g + 1;
       int h_value = g_value + dist(u, g);
       // use real cost whenever available
-      auto itr = PATH_TABLE[u->id]->find(g->id);
-      if (itr != PATH_TABLE[u->id]->end()) h_value = g_value + itr->second.size() - 1;
+      auto itr = PATH_TABLE.find(getPathTableKey(u, g));
+      if (itr != PATH_TABLE.end()) h_value = g_value + itr->second.size() - 1;
       // create new node
       AstarNode* m = createNewNode(u, g_value, h_value, n);
       OPEN.push(m);
@@ -267,7 +253,7 @@ void Graph::registerPath(const Path& path)
   Node* g = *(path.end() - 1);
   do {
     v = tmp[0];
-    PATH_TABLE[v->id]->operator[](g->id) = tmp;
+    PATH_TABLE[getPathTableKey(v, g)] = tmp;
     tmp.erase(tmp.begin());
   } while (tmp.size() > 2);
 }
@@ -280,9 +266,8 @@ Path Graph::getPath(Node* const s, Node* const g, const bool cache,
     return getPathWithoutCache(s, g, MT, prohibited_nodes);
 
   // check cache
-  if (PATH_TABLE.empty()) initilizePathTable();
-  auto itr = PATH_TABLE[s->id]->find(g->id);
-  if (itr != PATH_TABLE[s->id]->end()) return itr->second;
+  auto itr = PATH_TABLE.find(getPathTableKey(s, g));
+  if (itr != PATH_TABLE.end()) return itr->second;
 
   // failed -> use A* search
   Path path = getPathWithCache(s, g, MT);
@@ -322,7 +307,6 @@ Grid::Grid(const std::string& _map_file) : Graph(), map_file(_map_file)
 #else
   std::ifstream file(map_file);
 #endif
-
   if (!file) halt("file " + map_file + " is not found.");
 
   std::string line;
@@ -348,7 +332,7 @@ Grid::Grid(const std::string& _map_file) : Graph(), map_file(_map_file)
 
   // create nodes
   int y = 0;
-  V = Nodes(width * height, nullptr);
+  V = Nodes(2 * width * height, nullptr);
   while (getline(file, line)) {
     // for CRLF coding
     if (*(line.end() - 1) == 0x0d) line.pop_back();
@@ -357,8 +341,11 @@ Grid::Grid(const std::string& _map_file) : Graph(), map_file(_map_file)
     for (int x = 0; x < width; ++x) {
       char s = line[x];
       if (s == 'T' or s == '@') continue;  // object
-      int id = width * y + x;
-      Node* v = new Node(id, x, y);
+      int id = (width * y + x) * 2 + HORIZONTAL;
+      Node* v = new Node(id, x, y, HORIZONTAL);
+      V[id] = v;
+      id = (width * y + x) * 2 + VERTICAL;
+      v = new Node(id, x, y, VERTICAL);
       V[id] = v;
     }
     ++y;
@@ -370,30 +357,38 @@ Grid::Grid(const std::string& _map_file) : Graph(), map_file(_map_file)
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
       if (!existNode(x, y)) continue;
-      Node* v = getNode(x, y);
+      Node* v = getNode(x, y, HORIZONTAL);
+
+      // turn
+      v->neighbor.push_back(getNode(x, y, VERTICAL));
       // left
-      if (existNode(x - 1, y)) v->neighbor.push_back(getNode(x - 1, y));
+      if (existNode(x - 1, y)) v->neighbor.push_back(getNode(x - 1, y, HORIZONTAL));
       // right
-      if (existNode(x + 1, y)) v->neighbor.push_back(getNode(x + 1, y));
+      if (existNode(x + 1, y)) v->neighbor.push_back(getNode(x + 1, y, HORIZONTAL));
+
+      v = getNode(x, y, VERTICAL);
+
+      // turn
+      v->neighbor.push_back(getNode(x, y, HORIZONTAL));
       // up
-      if (existNode(x, y - 1)) v->neighbor.push_back(getNode(x, y - 1));
+      if (existNode(x, y - 1)) v->neighbor.push_back(getNode(x, y - 1, VERTICAL));
       // down
-      if (existNode(x, y + 1)) v->neighbor.push_back(getNode(x, y + 1));
+      if (existNode(x, y + 1)) v->neighbor.push_back(getNode(x, y + 1, VERTICAL));
     }
   }
 }
 
 bool Grid::existNode(int id) const
 {
-  return 0 <= id && id < width * height && V[id] != nullptr;
+  return 0 <= id && id < width * height * 2 && V[id] != nullptr;
 }
 
 bool Grid::existNode(int x, int y) const
 {
   return 0 <= x && x < width && 0 <= y && y < height &&
-         existNode(y * width + x);
+         existNode((y * width + x) * 2); // if VERTICAL or HORIZONTAL position exists other type also exists
 }
 
 Node* Grid::getNode(int id) const { return V[id]; }
 
-Node* Grid::getNode(int x, int y) const { return getNode(y * width + x); }
+Node* Grid::getNode(int x, int y, int t) const { return getNode((y * width + x) * 2 + t); }
