@@ -89,6 +89,7 @@ public:
   bool existNode(int x, int y) const;
   Node* getNode(int id) const;
   Node* getNode(int x, int y, int t) const;
+  Node* getTwinNode(int id) const;
 
   int dist(const Node* const v, const Node* const u) const
   {
