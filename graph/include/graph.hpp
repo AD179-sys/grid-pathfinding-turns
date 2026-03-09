@@ -53,6 +53,7 @@ public:
   // in grid, id = y * width + x
   virtual Node* getNode(int x, int y) const { return nullptr; };
   virtual Node* getNode(int id) const { return nullptr; };
+  virtual Node* getTwinNode(int id) const {return nullptr; };
 
   // in grid, Manhattan distance
   virtual int dist(const Node* const v, const Node* const u) const { return 0; }

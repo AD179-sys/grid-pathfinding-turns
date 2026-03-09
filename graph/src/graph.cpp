@@ -393,5 +393,4 @@ Node* Grid::getNode(int id) const { return V[id]; }
 
 Node* Grid::getNode(int x, int y, int t) const { return getNode((y * width + x) * 2 + t); }
 
-
 Node* Grid::getTwinNode(int id) const { return V[id ^ 1]; } // get the same node with different orientation
